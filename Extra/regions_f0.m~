@@ -1,0 +1,16 @@
+function [suprema] = regions_f0(PSI, x, t)
+
+cutoff = 0.95;
+
+row = find(PSI >= cutoff);
+results = zeros(length(row)+1, 1);
+
+for i = 1:length(row)
+    results(i) = [t(row(i)) abs(PSI(row(i))];
+end
+
+results(length(row)+1) = [9999999999999 0 0];
+
+
+end
+

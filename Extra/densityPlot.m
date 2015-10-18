@@ -1,5 +1,5 @@
 function densityPlot(PSI, x, t, dt, intr)
-    surf(x(1:1:end), t(1:intr:end), abs(PSI(1:intr:end, 1:1:end)).^2, 'EdgeColor', 'none'); 
+    surf(x(1:1:end), t(1:intr:end), PSI(1:intr:end, 1:1:end), 'EdgeColor', 'none'); 
     ylim([0, max(t)+dt]) 
     xlim([x(1) x(end)]) 
     colorbar('eastoutside') 

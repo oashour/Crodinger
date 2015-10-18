@@ -55,8 +55,8 @@ maxima = regions(PSI, x, t, q);
 % %    fclose(fid);
 % %end
 
-%t0 = -log(A1/Omega)/lambda + log(lambda)/lambda;
-%tf = maxima(1,1);
+t0 = -log(A1/Omega)/lambda + log(lambda)/lambda;
+tf = maxima(1,1);
 
 %fid = fopen(fullfile(dir, 'results_q.txt'), 'a+');
 %fprintf(fid, '%2.2f     %2.9f    %2.16f\n', A1, q, tf);

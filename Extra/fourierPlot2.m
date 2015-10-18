@@ -16,7 +16,7 @@
 % You should have received a copy of the GNU General Public License
 % along with HighNLSE.  If not, see <http://www.gnu.org/licenses/>.
 
-function [A_0, time] = fourierPlot(PSI, Nx, t, num)
+function [A_0, time] = fourierPlot2(PSI, t, num)
 % FUNCTION: Plots analytical function of r, c, d, e vs actual data
 % INPUT:
 %       PSI: full spatiotemporal wave function
@@ -35,7 +35,7 @@ CO = [   0         0    1.0000; %BLUE
 
 % Prepare the actual data
 J = 2500;                                   % Scaling down of number of points
-PSI_k = abs(fft(PSI'))/Nx;                  % Absolute normalized fft
+PSI_k = PSI;                  % Absolute normalized fft
 data = log(PSI_k(1:num, 1:J:end));          % Our data
 
 hData = plot(t(1:J:end), data, 'o', 'MarkerSize', 6); grid on;
