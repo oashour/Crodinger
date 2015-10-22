@@ -1,19 +1,14 @@
-/*s********************************************************************************
-* Numerical Solution for the Cubic Nonlinear Schrodinger Equation in (1+1)D	 	  *
-* using symmetric split step Fourier method		                              	  *
-* Coded by: Omar Ashour, Texas A&M University at Qatar, February 2015.    	      *
-* ********************************************************************************/
 #include "lib.h"
-#define ENERGY 0 
 
 int main(int argc, char *argv[])
 {
-    const int print_results = 1;
-    const int fourier_0 = 0;
-    const int n_print = 100;
+    //const bool print_results = 1;
+    //const bool print_spectrum = 0;
+    //const int fourier_sampling = 100;
+    //const int result_sampling;
 
     // Grid parameters
-    double dt, A1, q, tm; int order, nx; char type;
+    const double dt, A1, q, tm; const int order, nx; const char type;
     printf("Enter dt: ");
     scanf("%lf", &dt);
     printf("Enter tm: ");
@@ -28,13 +23,28 @@ int main(int argc, char *argv[])
     scanf("%d", &order);
     printf("Enter algorithm type (S for symplect, M for multiproduct): ");
     scanf(" %c", &type);
+    printf("Do you want to print the results? [0/1]");
+    scanf("%d", &print_results);
+    if (print_results)
+    {
+        printf("Choose sampling. 1 means print whole array, N prints one every N elements.");
+        scanf("%d", &result_sampling);
+    }
+    printf("Do you want to print the spectrum? [0/1]");
+    scanf("%d", &print_spectrum);
+    if (print_results)
+    {
+        printf("Choose sampling. 1 means print whole array, N prints one every N elements.");
+        scanf("%d", &fourier_sampling);
+    }
+
 
     const int nt = tm/dt;   			        // number of temporal nodes
     const double l = M_PI/sqrt(1-2*q);		    // Spatial Period
     const double dx = (l / nx);			        // spatial step size
     const double Omega = 2*sqrt(1-2*q);
     const double A0 = sqrt(1-2*A1*A1);
-    const int size = nt/n_print;
+    const int size = nt/fourier_sampling;
     
     char paramf[20];
     sprintf(paramf, "output/param.txt");
@@ -54,19 +64,14 @@ int main(int argc, char *argv[])
             dt, nx, tm, order, type, q);
 
     // Allocate the arrays
-    double *psi_r, *psi_i, *psi_f_0, *psi_f_1, *psi_f_2, *psi_f_3, *psi_f_4, *psi_f_5;
+    double *psi_r, *psi_i, *spectrum;
     fftw_complex *psi_f;
     double *x = (double*)malloc(sizeof(double) * nx);
     double *k2 = (double*)malloc(sizeof(double) * nx);
     fftw_complex *psi = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * nx);
-    if (fourier_0)
+    if (print_spectrum)
     {
-        psi_f_0 = (double*) malloc(sizeof(double) * size);
-        psi_f_1 = (double*) malloc(sizeof(double) * size);
-        psi_f_2 = (double*) malloc(sizeof(double) * size);
-        psi_f_3 = (double*) malloc(sizeof(double) * size);
-        psi_f_4 = (double*) malloc(sizeof(double) * size);
-        psi_f_5 = (double*) malloc(sizeof(double) * size);
+        spectrum = (double*) malloc(sizeof(double) * size*nx);
         psi_f = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * nx);
     }
     if (print_results)
@@ -92,7 +97,7 @@ int main(int argc, char *argv[])
     fftw_plan forward, backward, f0_plan;
     forward = fftw_plan_dft_1d(nx, psi, psi, FFTW_FORWARD, FFTW_ESTIMATE);
     backward = fftw_plan_dft_1d(nx, psi, psi, FFTW_BACKWARD, FFTW_ESTIMATE);
-    if (fourier_0)
+    if (print_spectrum)
         f0_plan = fftw_plan_dft_1d(nx, psi, psi_f, FFTW_FORWARD, FFTW_ESTIMATE);
 
     // Create wave number. Flipped to make up for not shifting 0 frequency component to the middle.
@@ -117,15 +122,11 @@ int main(int argc, char *argv[])
     printf("Evolving time.\n");
     for (int i = 0; i < nt; i++)
     {
-        if (fourier_0 && (i % n_print == 0))
+        if (print_spectrum && (i % fourier_sampling == 0))
         {
             fftw_execute(f0_plan);
-            psi_f_0[h] = cabs(psi_f[0])/nx;
-            psi_f_1[h] = cabs(psi_f[1])/nx;
-            psi_f_2[h] = cabs(psi_f[2])/nx;
-            psi_f_3[h] = cabs(psi_f[3])/nx;
-            psi_f_4[h] = cabs(psi_f[4])/nx;
-            psi_f_5[h] = cabs(psi_f[5])/nx;
+            for (int j = 0; j < nx; j++)
+                spectrum[ind(j, h)] = cabs(psi_f[j])/nx;
             h++;
         }
      
@@ -181,25 +182,10 @@ int main(int argc, char *argv[])
         fclose(fp);
     } 
 
-    if (fourier_0)
+    if (print_spectrum)
     {
-        fp=fopen("output/psi_f_0.bin", "wb");
-        fwrite(psi_f_0, sizeof(double), size, fp);
-        fclose(fp);
-        fp=fopen("output/psi_f_1.bin", "wb");
-        fwrite(psi_f_1, sizeof(double), size, fp);
-        fclose(fp);
-        fp=fopen("output/psi_f_2.bin", "wb");
-        fwrite(psi_f_2, sizeof(double), size, fp);
-        fclose(fp);
-        fp=fopen("output/psi_f_3.bin", "wb");
-        fwrite(psi_f_3, sizeof(double), size, fp);
-        fclose(fp);
-        fp=fopen("output/psi_f_4.bin", "wb");
-        fwrite(psi_f_4, sizeof(double), size, fp);
-        fclose(fp);
-        fp=fopen("output/psi_f_5.bin", "wb");
-        fwrite(psi_f_5, sizeof(double), size, fp);
+        fp=fopen("output/spectrum.bin", "wb");
+        fwrite(spectrum, sizeof(double), size*nt, fp);
         fclose(fp);
     }
 
@@ -207,17 +193,12 @@ int main(int argc, char *argv[])
     printf("Cleaninig up.\n");
     fftw_destroy_plan(forward);
     fftw_destroy_plan(backward);
-    if (fourier_0)
+    if (print_spectrum)
         fftw_destroy_plan(f0_plan);
     fftw_free(psi);
-    if (fourier_0)
+    if (print_spectrum)
     {
-        free(psi_f_0);
-        free(psi_f_1);
-        free(psi_f_2);
-        free(psi_f_3);
-        free(psi_f_4);
-        free(psi_f_5);
+        free(spectrum);
         fftw_free(psi_f);
     }
     if (print_results)
