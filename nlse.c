@@ -52,11 +52,11 @@ int main(int argc, char *argv[])
         scanf("%d", &spectrum_sampling);
     }
 
-    printf("-----------------------------------.\n");
+    printf("\n-----------------------------------\n");
     printf("Running Program.\n");
-    printf("-----------------------------------.\n");
+    printf(  "-----------------------------------\n");
     // Derived parameters
-    int r_size, s_size;
+    int r_size = 0, s_size = 0;
     const int nt = tm/dt;   			        // Number of temporal nodes
     const double l = M_PI/sqrt(1-2*q);		    // Spatial period/twice box length
     const double dx = (l / nx);			        // Spatial step size
@@ -68,17 +68,6 @@ int main(int argc, char *argv[])
         s_size = nt/spectrum_sampling;           // Total size of spectrum array
     
     // Print parameter file
-    printf("Printing param.txt file.\n");
-    FILE *fp = fopen("output/param.txt", "w");
-    fprintf(fp, "%.13f\n"
-                "%d\n"
-                "%.13f\n"
-                "%.13f\n"
-                "%.13f\n"
-                "%d\n"
-                "%c\n", dt, nx, tm, A1, q, order, type);
-    fclose(fp);
-
     // Print basic info about simulation
     printf("dt:    %.5f\n"
            "nx:    %d\n"
@@ -86,7 +75,22 @@ int main(int argc, char *argv[])
            "A1:    %.1e\n"
            "a:     %.8f\n"
            "Order: %d\n"
-           "Type:  %c\n", dt, nx, tm, A1, q, order, type);
+           "Type:  %c\n"
+           "Sn:    %d\n"
+           "Pn:    %d\n", dt, nx, tm, A1, q, order, type, s_size, r_size);
+
+    printf("\nPrinting param.txt file.\n");
+    FILE *fp = fopen("output/param.txt", "w");
+    fprintf(fp, "%.13f\n"
+                "%d\n"
+                "%.13f\n"
+                "%.13f\n"
+                "%.13f\n"
+                "%d\n"
+                "%d\n"
+                "%d\n"
+                "%c\n", dt, nx, tm, A1, q, s_size, r_size, order, type);
+    fclose(fp);
 
     // Allocate the arrays
     printf("Allocating arrays.\n");
@@ -155,10 +159,7 @@ int main(int argc, char *argv[])
         {
             fftw_execute(f0_plan);                         // Get step's spectrum 
             for (int j = 0; j < nx; j++)
-            {
                 spectrum[ind(h,j)] = cabs(psi_f[j])/nx;   // Save spectrum
-                printf("h/j/ind: %d/%d/%d\n", h, j, ind(h, j));
-            }
             h++;
         }
      
@@ -219,7 +220,7 @@ int main(int argc, char *argv[])
     }
 
     // Clean up
-    printf("Cleaninig up.\n");
+    printf("Cleaning up.\n");
     // Destroy plans
     fftw_destroy_plan(forward);
     fftw_destroy_plan(backward);
