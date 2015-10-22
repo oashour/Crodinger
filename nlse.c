@@ -8,9 +8,9 @@
 
 int main(int argc, char *argv[])
 {
-    int print_results = 0;
-    int fourier_0 = 1;
-
+    const int print_results = 1;
+    const int fourier_0 = 0;
+    const int n_print = 100;
 
     // Grid parameters
     double dt, A1, q, tm; int order, nx; char type;
@@ -29,12 +29,12 @@ int main(int argc, char *argv[])
     printf("Enter algorithm type (S for symplect, M for multiproduct): ");
     scanf(" %c", &type);
 
-    // const double dt = atof(argv[1]);			// temporal step size
     const int nt = tm/dt;   			        // number of temporal nodes
     const double l = M_PI/sqrt(1-2*q);		    // Spatial Period
     const double dx = (l / nx);			        // spatial step size
     const double Omega = 2*sqrt(1-2*q);
     const double A0 = sqrt(1-2*A1*A1);
+    const int size = nt/n_print;
     
     char paramf[20];
     sprintf(paramf, "output/param.txt");
@@ -44,8 +44,9 @@ int main(int argc, char *argv[])
                 "%.13f\n"
                 "%.13f\n"
                 "%.13f\n"
-                "%.13d\n"
-                "%c\n", dt, nx, tm, A1, q, order, type);
+                "%d\n"
+                "%c\n"
+                "%d\n", dt, nx, tm, A1, q, order, type, size);
     fclose(fp);
 
     // Print basic info about simulation
@@ -53,14 +54,19 @@ int main(int argc, char *argv[])
             dt, nx, tm, order, type, q);
 
     // Allocate the arrays
-    double *psi_r, *psi_i, *psi_f_0;
+    double *psi_r, *psi_i, *psi_f_0, *psi_f_1, *psi_f_2, *psi_f_3, *psi_f_4, *psi_f_5;
     fftw_complex *psi_f;
     double *x = (double*)malloc(sizeof(double) * nx);
     double *k2 = (double*)malloc(sizeof(double) * nx);
     fftw_complex *psi = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * nx);
     if (fourier_0)
     {
-        psi_f_0 = (double*) malloc(sizeof(double) * nt);
+        psi_f_0 = (double*) malloc(sizeof(double) * size);
+        psi_f_1 = (double*) malloc(sizeof(double) * size);
+        psi_f_2 = (double*) malloc(sizeof(double) * size);
+        psi_f_3 = (double*) malloc(sizeof(double) * size);
+        psi_f_4 = (double*) malloc(sizeof(double) * size);
+        psi_f_5 = (double*) malloc(sizeof(double) * size);
         psi_f = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * nx);
     }
     if (print_results)
@@ -107,13 +113,20 @@ int main(int argc, char *argv[])
     }
    
     // Start time evolution
+    int h = 0;
     printf("Evolving time.\n");
     for (int i = 0; i < nt; i++)
     {
-        if (fourier_0)
+        if (fourier_0 && (i % n_print == 0))
         {
             fftw_execute(f0_plan);
-            psi_f_0[i] = cabs(psi_f[0])/nx;
+            psi_f_0[h] = cabs(psi_f[0])/nx;
+            psi_f_1[h] = cabs(psi_f[1])/nx;
+            psi_f_2[h] = cabs(psi_f[2])/nx;
+            psi_f_3[h] = cabs(psi_f[3])/nx;
+            psi_f_4[h] = cabs(psi_f[4])/nx;
+            psi_f_5[h] = cabs(psi_f[5])/nx;
+            h++;
         }
      
         if (print_results)
@@ -145,7 +158,7 @@ int main(int argc, char *argv[])
             return 1;
         }
     }
-
+    printf("%d/%d", size, h);
     // Print output
     if (print_results)
     {
@@ -170,8 +183,23 @@ int main(int argc, char *argv[])
 
     if (fourier_0)
     {
-        fp=fopen("output/psi_f.bin", "wb");
-        fwrite(psi_f_0, sizeof(double), nt, fp);
+        fp=fopen("output/psi_f_0.bin", "wb");
+        fwrite(psi_f_0, sizeof(double), size, fp);
+        fclose(fp);
+        fp=fopen("output/psi_f_1.bin", "wb");
+        fwrite(psi_f_1, sizeof(double), size, fp);
+        fclose(fp);
+        fp=fopen("output/psi_f_2.bin", "wb");
+        fwrite(psi_f_2, sizeof(double), size, fp);
+        fclose(fp);
+        fp=fopen("output/psi_f_3.bin", "wb");
+        fwrite(psi_f_3, sizeof(double), size, fp);
+        fclose(fp);
+        fp=fopen("output/psi_f_4.bin", "wb");
+        fwrite(psi_f_4, sizeof(double), size, fp);
+        fclose(fp);
+        fp=fopen("output/psi_f_5.bin", "wb");
+        fwrite(psi_f_5, sizeof(double), size, fp);
         fclose(fp);
     }
 
@@ -182,9 +210,16 @@ int main(int argc, char *argv[])
     if (fourier_0)
         fftw_destroy_plan(f0_plan);
     fftw_free(psi);
-    fftw_free(psi_f);
     if (fourier_0)
+    {
         free(psi_f_0);
+        free(psi_f_1);
+        free(psi_f_2);
+        free(psi_f_3);
+        free(psi_f_4);
+        free(psi_f_5);
+        fftw_free(psi_f);
+    }
     if (print_results)
     {
         free(psi_i); 
