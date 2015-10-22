@@ -4,3 +4,6 @@ output/
 archive/
 Extra/
 *.o
+*.swp
+nlse
+*~
