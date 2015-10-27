@@ -1,26 +1,48 @@
 #include "lib.h"
 
+#define PEREGRINE 1
+#define BACKGROUND 2
+
 int main(int argc, char *argv[])
 {
     // Simulation parameters
-    double dt, A1, q, tm; 
-    int order, nx, spectrum_sampling, psi_sampling; 
+    double dt, tm, l; 
+    double A1 = 0, q = 0;
+    int order, nx, spectrum_sampling, psi_sampling, l_mult, initial; 
     char temp1, temp2;
     char type;
+    bool print_psi = 0;
+    bool print_spectrum = 0;
 
     // Prepare simulation
     // Basic grid parameters
     printf("dt: ");                         // Grid temporal spacing          
     scanf("%lf", &dt);
-    printf("tm: ");                         // Maximum time
-    scanf("%lf", &tm);
     printf("nx: ");                         // Number of Fourier modes
     scanf("%d", &nx);                       
-    printf("A1: ");                         // Cosine amplitude 
-    scanf("%lf", &A1);
-    printf("a: ");                          // Breather parameter
-    scanf("%lf", &q);
+    printf("tm: ");                         // Maximum time
+    scanf("%lf", &tm);
 
+    // Initial Conditions
+    printf("For the initial wavefunction, [1] denotes "
+           "Peregrine soliton, [2] denotes background.\n"
+           "Initial wavefunction code: ");
+    scanf("%d", &initial);
+    if (initial == BACKGROUND)
+    {
+        printf("A1: ");                         // Cosine amplitude 
+        scanf("%lf", &A1);
+        printf("a: ");                          // Breather parameter
+        scanf("%lf", &q);
+        printf("Length Multiple: ");            // Breather parameter
+        scanf("%d", &l_mult);
+        l = l_mult*M_PI/sqrt(1-2*q);		    // Spatial period/twice box length
+    }
+    else if (initial == PEREGRINE)
+    {
+        printf("L: ");
+        scanf("%lf", &l);
+    }
     // Determine algorithm 
     printf("Algorithm order: ");            // Pick algorithm
     scanf("%d", &order);
@@ -35,7 +57,7 @@ int main(int argc, char *argv[])
     // Psi output 
     printf("Print psi? ");                  // Print psi or not
     scanf(" %c", &temp1);
-    const bool print_psi = (temp1 != 'n');
+    print_psi = (temp1 == 'y');
     if (print_psi)
     {
         printf("Result sampling: ");       // If yes, how often
@@ -45,7 +67,7 @@ int main(int argc, char *argv[])
     // Spectrum output 
     printf("Print spectrum? ");            // Print spectrum or not
     scanf(" %c", &temp2);
-    const bool print_spectrum = (temp2 != 'n');
+    print_spectrum = (temp2 == 'y');
     if (print_spectrum)
     {
         printf("Spectrum sampling: ");     // If yes, how often
@@ -57,15 +79,18 @@ int main(int argc, char *argv[])
     printf(  "-----------------------------------\n");
     // Derived parameters
     int r_size = 0, s_size = 0;
-    const int nt = tm/dt;   			        // Number of temporal nodes
-    const double l = M_PI/sqrt(1-2*q);		    // Spatial period/twice box length
-    const double dx = (l / nx);			        // Spatial step size
-    const double Omega = 2*sqrt(1-2*q);         // Fundamental frequency
-    const double A0 = sqrt(1-2*A1*A1);          // Normalization factor
+    const int nt = tm/dt;   		   // Number of temporal nodes
+    const double dx = (l / nx);		   // Spatial step size
+    double Omega, A0;
+    if (initial == BACKGROUND)
+    {
+        Omega = 2*sqrt(1-2*q);         // Fundamental frequency
+        A0 = sqrt(1-2*A1*A1);          // Normalization factor
+    }
     if (print_psi)
-        r_size = nt/psi_sampling;           // Total size of results array
+        r_size = nt/psi_sampling;      // Total size of results array
     if (print_spectrum)
-        s_size = nt/spectrum_sampling;           // Total size of spectrum array
+        s_size = nt/spectrum_sampling; // Total size of spectrum array
     
     // Print parameter file
     // Print basic info about simulation
@@ -114,14 +139,14 @@ int main(int argc, char *argv[])
     // Allocating extra arrays for high orders
     printf("Allocating extra arrays.\n");
     fftw_complex *psi1, *psi2, *psi3, *psi4;
-    if (order > 2)                              // Special arrays for order 4, 6, 8 
+    if (order >= 4)                              // Special arrays for order 4, 6, 8 
     {
         psi1 = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * nx);
         psi2 = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * nx);
     }
-    if (order > 4)                              // Special arrays for order 6, 8 
+    if (order >= 6)                              // Special arrays for order 6, 8 
         psi3 = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * nx);
-    if (order > 6)                              // Special arrays for order 8  
+    if (order >= 8)                              // Special arrays for order 8  
         psi4 = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * nx);
 
     // Create transform plans
@@ -147,7 +172,16 @@ int main(int argc, char *argv[])
     {
         x[i] = (i-nx/2)*dx;                         // x array
 	    k2[i] = k[i]*k[i];                          // Square wave number
-	    psi[i] = (A0+2*A1*cos(Omega*x[i])) + 0*I;   // Initial WF 
+        if (initial == PEREGRINE)
+            psi[i] = 1 - (4/(1+4*x[i]*x[i])) + 0*I;
+        else if (initial == BACKGROUND)
+	        psi[i] = (A0+2*A1*cos(Omega*x[i])) + 0*I;   // Initial WF 
+        else
+        {
+            printf("Unidentified initial WF code. Exiting");
+            return 1;
+        }
+
     }
    
     // Start time evolution
@@ -244,14 +278,14 @@ int main(int argc, char *argv[])
         free(psi_i); 
         free(psi_r);
     }
-    if (order > 2)
+    if (order >= 4)
     {
         fftw_free(psi1);
         fftw_free(psi2);
     }
-    if (order > 4)
+    if (order >= 6)
         fftw_free(psi3);
-    if (order > 6)
+    if (order >= 8)
         fftw_free(psi4);
 
     return 0;
