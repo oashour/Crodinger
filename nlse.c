@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
         printf("Spectrum sampling: ");     // If yes, how often
         scanf("%d", &spectrum_sampling);
         printf("Spectrum file path: ");
-        scanf("%s" , f_psi_i);
+        scanf("%s" , f_spectrum);
     }
     if (print_spectrum | print_psi)
     {
