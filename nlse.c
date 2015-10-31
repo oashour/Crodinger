@@ -14,6 +14,7 @@ int main(int argc, char *argv[])
     bool print_psi = 0;
     bool print_spectrum = 0;
     double nu = 0;
+    char f_psi_i[256], f_psi_r[256], f_spectrum[256], f_param[256], f_x[256];
 
     // Prepare simulation
     // Basic grid parameters
@@ -80,6 +81,10 @@ int main(int argc, char *argv[])
     {
         printf("Result sampling: ");       // If yes, how often
         scanf("%d", &psi_sampling);
+        printf("Real psi file path: ");
+        scanf("%s" , f_psi_r);
+        printf("Imaginary psi file path: ");
+        scanf("%s" , f_psi_i);
     }
     
     // Spectrum output 
@@ -90,6 +95,15 @@ int main(int argc, char *argv[])
     {
         printf("Spectrum sampling: ");     // If yes, how often
         scanf("%d", &spectrum_sampling);
+        printf("Spectrum file path: ");
+        scanf("%s" , f_psi_i);
+    }
+    if (print_spectrum | print_psi)
+    {
+        printf("Param file path: ");
+        scanf("%s" , f_param);
+        printf("x file path: ");
+        scanf("%s" , f_x);
     }
 
     printf("\n-----------------------------------\n");
@@ -123,7 +137,7 @@ int main(int argc, char *argv[])
            "Pn:    %d\n", dt, nx, tm, A1, q, order, type, s_size, r_size);
 
     printf("\nPrinting param.txt file.\n");
-    FILE *fp = fopen("output/param.txt", "w");
+    FILE *fp = fopen(f_param, "w");
     fprintf(fp, "%.13f\n"
                 "%d\n"
                 "%.13f\n"
@@ -252,13 +266,13 @@ int main(int argc, char *argv[])
     if (print_psi)
     {
         printf("Printing output.\n");
-        fp=fopen("output/psi_i.bin", "wb");
+        fp=fopen(f_psi_i, "wb");
         fwrite(psi_i, sizeof(double), nx*r_size, fp);
         fclose(fp);
-        fp=fopen("output/psi_r.bin", "wb");
+        fp=fopen(f_psi_r, "wb");
         fwrite(psi_r, sizeof(double), nx*r_size, fp);
         fclose(fp);
-        fp=fopen("output/x.bin", "wb");
+        fp=fopen(f_x, "wb");
         fwrite(x, sizeof(double), nx, fp);
         fclose(fp);
     } 
@@ -266,8 +280,8 @@ int main(int argc, char *argv[])
     if (print_spectrum)
     {
         printf("Printing spectrum.\n");
-        fp=fopen("output/spectrum.bin", "wb");
-        fwrite(spectrum, sizeof(double), nt*s_size, fp);
+        fp=fopen(f_spectrum, "wb");
+        fwrite(spectrum, sizeof(double), nx*s_size, fp);
         fclose(fp);
     }
 
