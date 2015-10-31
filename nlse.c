@@ -9,10 +9,11 @@ int main(int argc, char *argv[])
     double dt, tm, l; 
     double A1 = 0, q = 0;
     int order, nx, spectrum_sampling, psi_sampling, l_mult, initial; 
-    char temp1, temp2;
+    char temp1, temp2, an_choice;
     char type;
     bool print_psi = 0;
     bool print_spectrum = 0;
+    double nu = 0;
 
     // Prepare simulation
     // Basic grid parameters
@@ -32,8 +33,25 @@ int main(int argc, char *argv[])
     {
         printf("A1: ");                         // Cosine amplitude 
         scanf("%lf", &A1);
-        printf("a: ");                          // Breather parameter
-        scanf("%lf", &q);
+        printf("Do you want to pick a or n? [a/n]");                          // Breather parameter
+        scanf(" %c", &an_choice);
+        if (an_choice == 'a')
+        {
+            printf("a: ");                          // Breather parameter
+            scanf("%lf", &q);
+        }
+        else if (an_choice == 'n')
+        {
+            printf("n: ");                          // Breather parameter
+            scanf("%lf", &nu);
+            q = 0.5*(1-1/(nu*nu));
+        }
+        else
+        {
+            printf("Unknown option. Exiting\n");
+            return 1;
+        }
+
         printf("Length Multiple: ");            // Breather parameter
         scanf("%d", &l_mult);
         l = l_mult*M_PI/sqrt(1-2*q);		    // Spatial period/twice box length
