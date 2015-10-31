@@ -8,3 +8,5 @@ Extra/
 nlse
 *~
 *.txt
+*.job
+jobs/
