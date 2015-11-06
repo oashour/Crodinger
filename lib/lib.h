@@ -9,6 +9,7 @@
 #include <complex.h>
 #include <fftw3.h>
 #include <stdbool.h>
+#include <assert.h>
 
 // PI
 #define M_PI 3.14159265358979323846264338327
