@@ -31,24 +31,25 @@ void simulation_print(struct simulation *sim)
     printf("\n");
     
     printf("Output information: \n");
-    printf("Print spectrum:      (--): %s  \n", sim->print_spectrum? "yes": "no");
-    printf("Print psi:           (--): %s  \n", sim->print_psi? "yes": "no");
-    printf("Spectrum samp. rate  (ss): %d  \n", sim->spectrum_sampling);
-    printf("Psi samp. rate       (ps): %d  \n", sim->psi_sampling);
-    printf("Spectrum # t-points  (sn): %d  \n", sim->s_size);
-    printf("Psi # t-points       (pn): %d  \n", sim->r_size);
+    printf("Samp. rate       (ps): %d  \n", sim->sampling);
+    printf("# Sampled points (pn): %d  \n", sim->print_size);
     printf("\n");
 
     printf("Output files: \n");
-    printf("Real psi file:      (--): %s  \n", sim->f_psi_r);
-    printf("Imag psi file:      (--): %s  \n", sim->f_psi_i);
-    printf("Spectrum file:      (--): %s  \n", sim->f_spectrum);
-    printf("Parameters file:    (--): %s  \n", sim->f_param);
-    printf("x-array file:       (--): %s  \n", sim->f_x);
+    printf("Real psi file:       (--): %s  \n", sim->f_psi_r);
+    printf("Imag psi file:       (--): %s  \n", sim->f_psi_i);
+    printf("Spectrum file:       (--): %s  \n", sim->f_spectrum);
+    printf("Parameters file:     (--): %s  \n", sim->f_param);
+    printf("KE file:             (--): %s  \n", sim->f_ke);
+    printf("PE file              (--): %s  \n", sim->f_pe);
+    printf("E file:              (--): %s  \n", sim->f_E);
+    printf("dE file:             (--): %s  \n", sim->f_dE);
+    printf("x-array file:        (--): %s  \n", sim->f_x);
 }
 
-
-void print_param(struct simulation *sim)
+void print_output(long double *psi_i, long double *psi_r, long double *x, 
+                  long double *spectrum, long double *ke, long double *pe, 
+                  long double *E, long double *dE, struct simulation *sim)
 {
     FILE *fp = fopen(sim->f_param, "w");
 
@@ -57,14 +58,66 @@ void print_param(struct simulation *sim)
     fprintf(fp, "%.13Lf\n", sim->tm);
     fprintf(fp, "%.13Lf\n", sim->A1);
     fprintf(fp, "%.13Lf\n", sim->q);
-    fprintf(fp, "%d\n",    sim->s_size);
-    fprintf(fp, "%d\n",    sim->r_size);
+    fprintf(fp, "%d\n",    sim->print_size);
     fprintf(fp, "%d\n",    sim->order);
     fprintf(fp, "%c\n",    sim->type);
 
-    fclose(fp);
-}
+    double *psi_rd, *psi_id, *x_d, *pe_d;
+    double *spectrum_d, *ke_d, *dE_d, *E_d;
 
+    psi_rd = (double*)malloc(sizeof(double) * sim->nx*sim->print_size);  
+    psi_id = (double*)malloc(sizeof(double) * sim->nx*sim->print_size);   
+    x_d    = (double*)malloc(sizeof(double) * sim->nx);    
+    pe_d   = (double*)malloc(sizeof(double) * sim->print_size);    
+    spectrum_d = (double*)malloc(sizeof(double) * sim->nx*sim->print_size);  
+    ke_d = (double*)malloc(sizeof(double) * sim->print_size);  
+    E_d = (double*)malloc(sizeof(double) * sim->print_size);  
+    dE_d = (double*)malloc(sizeof(double) * sim->print_size);  
+    
+    for (int i = 0; i < sim->nx*sim->print_size; i++)
+    {
+        psi_id[i] = (double) psi_i[i];
+        psi_rd[i] = (double) psi_r[i];
+    }
+
+    for (int i = 0; i < sim->nx; i++)
+        x_d[i] = (double) x[i];
+
+    for (int i = 0; i < sim->print_size; i++)
+    {
+        pe_d[i] = (double) pe[i];
+        dE_d[i] = (double) dE[i];
+        E_d[i] = (double) E[i];
+        ke_d[i] = (double) ke[i];
+    }
+
+    for (int i = 0; i < sim->nx*sim->print_size; i++)
+        spectrum_d[i] = (double) spectrum[i];
+
+    fp=fopen(sim->f_psi_i, "wb");
+    fwrite(psi_id, sizeof(double), sim->nx*sim->print_size, fp);
+    fclose(fp);
+    fp=fopen(sim->f_psi_r, "wb");
+    fwrite(psi_rd, sizeof(double), sim->nx*sim->print_size, fp);
+    fclose(fp);
+    fp=fopen(sim->f_x, "wb");
+    fwrite(x_d, sizeof(double), sim->nx, fp);
+    fp=fopen(sim->f_spectrum, "wb");
+    fwrite(spectrum_d, sizeof(double), sim->nx*sim->print_size, fp);
+    fp=fopen(sim->f_pe, "wb");
+    fwrite(pe_d, sizeof(double), sim->print_size, fp);
+    fp=fopen(sim->f_ke, "wb");
+    fwrite(ke_d, sizeof(double), sim->print_size, fp);
+    fp=fopen(sim->f_E, "wb");
+    fwrite(E_d, sizeof(double), sim->print_size, fp);
+    fp=fopen(sim->f_dE, "wb");
+    fwrite(dE_d, sizeof(double), sim->print_size, fp);
+    fclose(fp);
+
+    free(ke_d); free(pe_d); free(dE_d); free(E_d);
+    free(psi_id); free(spectrum_d); 
+    free(psi_rd);
+}
 struct simulation *read_param(void)
 {
     // Create simulation structure
@@ -73,13 +126,12 @@ struct simulation *read_param(void)
     // Temporary valuables to be read into
     long double dt, tm, l; 
     long double A1 = 0, q = 0;
-    int order, nx, spectrum_sampling = 0, psi_sampling = 0, l_mult, initial; 
-    char temp1, temp2, an_choice;
+    int order, nx, sampling, l_mult, initial; 
+    char an_choice;
     char type;
-    bool print_psi = 0;
-    bool print_spectrum = 0;
     long double nu = 0;
     char f_psi_i[256], f_psi_r[256], f_spectrum[256], f_param[256], f_x[256];
+    char f_pe[256], f_ke[256], f_E[256], f_dE[256];
     
     // Basic grid parameters
     printf("dt: ");                         // Grid temporal spacing          
@@ -137,43 +189,31 @@ struct simulation *read_param(void)
     else
         type = '-';
 
-    // Psi output 
-    printf("Print psi? ");                  // Print psi or not
-    scanf(" %c", &temp1);
-    print_psi = (temp1 == 'y');
-    if (print_psi)
-    {
-        printf("Result sampling: ");       // If yes, how often
-        scanf("%d", &psi_sampling);
-        printf("Real psi file path: ");
-        scanf("%s" , f_psi_r);
-        printf("Imaginary psi file path: ");
-        scanf("%s" , f_psi_i);
-    }
-    
-    // Spectrum output 
-    printf("Print spectrum? ");            // Print spectrum or not
-    scanf(" %c", &temp2);
-    print_spectrum = (temp2 == 'y');
-    
-    if (print_spectrum)
-    {
-        printf("Spectrum sampling: ");     // If yes, how often
-        scanf("%d", &spectrum_sampling);
-        printf("Spectrum file path: ");
-        scanf("%s" , f_spectrum);
-    }
-    if (print_spectrum | print_psi)
-    {
-        printf("Param file path: ");
-        scanf("%s" , f_param);
-        printf("x file path: ");
-        scanf("%s" , f_x);
-    }
+    // Output 
+    printf("Result sampling: ");       
+    scanf("%d", &sampling);
+    printf("Real psi file path: ");
+    scanf("%s" , f_psi_r);
+    printf("Imaginary psi file path: ");
+    scanf("%s" , f_psi_i);
+    printf("Spectrum file path: ");
+    scanf("%s" , f_spectrum);
+    printf("Param file path: ");
+    scanf("%s" , f_param);
+    printf("x file path: ");
+    scanf("%s" , f_x);
+    printf("PE file path: ");
+    scanf("%s" , f_pe);
+    printf("KE file path: ");
+    scanf("%s" , f_ke);
+    printf("E file path: ");
+    scanf("%s" , f_E);
+    printf("dE file path: ");
+    scanf("%s" , f_dE);
     
     // Derived parameters
-    int r_size = 0, s_size = 0;
-    const int nt = tm/dt;   	// Number of temporal nodes
+    int print_size;
+    const int nt = tm/dt;   	           // Number of temporal nodes
     const long double dx = (l/nx);		   // Spatial step size
     long double Omega = 0, A0 = 0;
     if (initial == BACKGROUND)
@@ -181,10 +221,7 @@ struct simulation *read_param(void)
         Omega = 2*sqrt(1-2*q);         // Fundamental frequency
         A0 = sqrt(1-2*A1*A1);          // Normalization factor
     }
-    if (print_psi)
-        r_size = nt/psi_sampling;      // Total size of results array
-    if (print_spectrum)
-        s_size = nt/spectrum_sampling; // Total size of spectrum array
+    print_size = nt/sampling;      // Total size of results array
     
 
     param->dt = dt;
@@ -195,18 +232,18 @@ struct simulation *read_param(void)
     param->order = order;
     param->nx = nx;
     param->type = type;
-    param->spectrum_sampling = spectrum_sampling;
-    param->psi_sampling = psi_sampling;
-    param->print_psi = print_psi;
-    param->print_spectrum = print_spectrum;
+    param->sampling = sampling;
     param->nu = nu;
     strcpy(param->f_psi_i, f_psi_i); 
     strcpy(param->f_psi_r, f_psi_r); 
     strcpy(param->f_spectrum, f_spectrum); 
     strcpy(param->f_param, f_param); 
     strcpy(param->f_x, f_x); 
-    param->r_size = r_size;
-    param->s_size = s_size;
+    strcpy(param->f_ke, f_ke); 
+    strcpy(param->f_pe, f_pe); 
+    strcpy(param->f_E, f_E); 
+    strcpy(param->f_dE, f_dE); 
+    param->print_size = print_size;
     param->dx = dx;
     param->nt = nt;
     param->Omega = Omega;
@@ -216,16 +253,43 @@ struct simulation *read_param(void)
     return param;
 }
 
+void arr_mult_c(fftwl_complex *out, fftwl_complex *in1, fftwl_complex *in2, int size)
+{
+    for(int i =0; i < size; i++)
+        out[i] = in1[i]*in2[i];
+}
+
+void arr_mult_l(long double *out, long double *in1, long double *in2, int size)
+{
+    for(int i =0; i < size; i++)
+        out[i] = in1[i]*in2[i];
+}
+
 void arr_mult(fftwl_complex *psi, long double mult, int size)
 {
     for (int i = 0; i < size; i++)
         psi[i] = psi[i]*mult;
 }
 
-void arr_add(fftwl_complex *psi, fftwl_complex *psi1, fftwl_complex *psi2, int size)
+long double arr_sum_l(long double *in, int size)
+{
+    long double out = 0;
+    for (int i =0; i < size; i++)
+        out += in[i];
+
+    return out;
+}
+
+void arr_add_l(long double *out, long double *in1, long double *in2, int size)
 {
     for (int i = 0; i < size; i++)
-        psi[i] = psi1[i]+psi2[i];
+        out[i] = in1[i]+in2[i];
+}
+
+void arr_add(fftwl_complex *out, fftwl_complex *in1, fftwl_complex *in2, int size)
+{
+    for (int i = 0; i < size; i++)
+        out[i] = in1[i]+in2[i];
 }
 
 void T2(fftwl_complex *psi, fftwl_complex *psi_o, int nt, long double dt, long double *k2, int nx, fftwl_plan forward, fftwl_plan backward) 
@@ -348,3 +412,36 @@ void T8_S(fftwl_complex *psi, int nt, long double dt, long double *k2, int nx,
         T6_S(psi, nt, ft*dt, k2, nx, forward, backward);
 }
 
+void energy(fftwl_complex *psi, long double *psi_r, long double *psi_i, long double *spectrum,
+            long double *ke, long double *pe, long double *E, long double *dE,
+            fftwl_plan f0_plan, fftwl_complex *psi_f, long double *k2, int m, int nx)
+{
+    long double *temp1 = (long double*)malloc(sizeof(long double) * nx);
+    long double *temp2 = (long double*)malloc(sizeof(long double) * nx);
+
+    for (int j = 0; j < nx; j++)
+        temp1[j] = cabsl(psi[j]);
+
+    arr_mult_l(temp1, temp1, temp1, nx);   // |psi|^2
+    arr_mult_l(temp2, temp1, temp1, nx);   // |psi|^4
+    pe[m] = -0.5*arr_sum_l(temp2, nx)/arr_sum_l(temp1, nx);   // U
+
+    for (int j = 0; j < nx; j++)
+    {
+        psi_r[ind2(m,j)] = creall(psi[j]);
+        psi_i[ind2(m,j)] = cimagl(psi[j]);
+    }	
+
+    // Calculate KE
+    fftwl_execute(f0_plan);                             // Get step's spectrum 
+    for (int j = 0; j < nx; j++)
+        spectrum[ind2(m,j)] = cabsl(psi_f[j])/nx;   // Save spectrum
+
+    arr_mult_l(temp1, &spectrum[ind2(m, 0)], &spectrum[ind2(m,0)], nx);             //|psi_f|^2
+    arr_mult_l(temp2, temp1, k2, nx);                //|psi_f|^2*k^2
+    ke[m] =  0.5*arr_sum_l(temp2, nx)/arr_sum_l(temp1, nx);  // T   
+
+    // Calculate Energy
+    E[m] = pe[m] + ke[m];
+    dE[m] = E[m] - E[0];
+}
