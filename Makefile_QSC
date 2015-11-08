@@ -1,0 +1,23 @@
+CC=gcc
+CFLAGS=-Wall -std=c99 -L/panfs/vol/opt/libs/fftw-333/lib -I/panfs/vol/opt/libs/fftw-333/include 
+INCLUDES=-Ilib
+LDFLAGS=-lfftw3 -lm -lfftw3q -lquadmath
+DIR = lib
+SRCS = nlseQ.c $(DIR)/libQ.c
+OBJS = $(SRCS:.c=.o)
+DEPS = libQ.h
+MAIN = nlseQ
+
+.PHONY: clean
+
+all: $(MAIN)
+	@echo NLSE solver has been compiled in Quad precision
+
+$(MAIN): $(OBJS) 
+	$(CC) -o $@ $^ $(INCLUDES) $(CFLAGS) $(LDFLAGS) 
+
+.c.o: $(SRCS) $(DEPS)
+	$(CC) -c -o $@ $< $(CFLAGS) $(LDFLAGS) $(INCLUDES)
+
+clean:
+	$(RM) *.o $(DIR)/*.o *~ $(MAIN)
