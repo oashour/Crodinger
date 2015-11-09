@@ -443,5 +443,6 @@ void energy(MYFFTW(_complex) *psi, MYTYPE *psi_r, MYTYPE *psi_i, MYTYPE *spectru
 
     // Calculate Energy
     E[m] = pe[m] + ke[m];
-    dE[m] = abs(E[m] - E[0]);
+    dE[m] = E[m] - E[0];
 }
+
